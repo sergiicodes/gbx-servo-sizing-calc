@@ -2,6 +2,7 @@
 import pandas as pd 
 import os
 
+# Set up name of new printed Excel report
 project_name = input("Project Name: ")
 axis_name = input("Axis Name: ")
 
@@ -9,7 +10,7 @@ axis_name = input("Axis Name: ")
 location = r"I:\MECH\SHA\Analyzer Selection.xlsx"
 df = pd.read_excel(location)
 
-# Gearbox Section
+# Read Gearbox Specs from Excel Database 
 gbx_item_num = pd.to_numeric(df.iloc[1:,0], errors='coerce').apply(lambda x: int(x))
 gbx_name = df.iloc[1:, 1].astype(str).str.strip()
 gbx_frame = pd.to_numeric(df.iloc[1:,2], errors='coerce')
@@ -37,12 +38,13 @@ else:
     
 peak_speed = float(input("\nPeak Speed: "))
 
+
 # Calculate the new speed for each selected gearbox
 new_speeds = []
 for ratio in gbx_ratio[gbx_name.str.startswith(first_three_letters)]:
     new_speeds.append(ratio * peak_speed)
 
-# Servo Selection
+# Read Servo Specs from Excel Database 
 servo_item_num = pd.to_numeric(df.iloc[1:,9], errors='coerce').dropna().apply(lambda x: int(x))
 servo_name = df.iloc[1:, 10].astype(str).str.strip().dropna()
 servo_cont_torque = pd.to_numeric(df.iloc[1:,11], errors='coerce').dropna()
