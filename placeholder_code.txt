@@ -1,12 +1,7 @@
 # Import Libraries 
 import pandas as pd 
-import os
 
-# Names the Excel file and sheet
-project_name = "BRENTON RAD 368"
-axis_name = "LANE DIVIDER"
-
-# Load Excel file
+# Pandas Read
 location = r"C:\Users\shacosta\Desktop\Analyzer Selection - Copy.xlsx"
 try:
     df = pd.read_excel(location)
@@ -24,18 +19,32 @@ gbx_torque = pd.to_numeric(df.iloc[1:,5], errors='coerce')
 gbx_cost = pd.to_numeric(df.iloc[1:,6], errors='coerce')
 
 # Drive Section 
-# D-Drive Section K5700
-Ddrive_name = df.iloc[1:, 17].astype(str).str.strip()
-Ddrive_name = Ddrive_name[Ddrive_name != 'nan'].reset_index(drop=True) 
-Ddrive_cost = pd.to_numeric(df.iloc[1:,19], errors='coerce').dropna()
-# H-Drive Section K5500
-Hdrive_name = df.iloc[1:, 21].astype(str).str.strip()
-Hdrive_name = Hdrive_name[Hdrive_name != 'nan'].reset_index(drop=True) 
-Hdrive_cost = pd.to_numeric(df.iloc[1:,23], errors='coerce').dropna()
+drive_item_num = pd.to_numeric(df.iloc[1:,16], errors='coerce').dropna().apply(lambda x: int(x))
+drive_name = df.iloc[1:, 17].astype(str).str.strip()
+drive_name = drive_name[drive_name != 'nan'].reset_index(drop=True) 
+drive_series = pd.to_numeric(df.iloc[1:,18], errors='coerce').dropna()
+drive_cost = pd.to_numeric(df.iloc[1:,19], errors='coerce').dropna()
+
+# Dictionary of Servos that Correspond to Respective Servo Drives
+# K5700 D-Drives
+k57_D_dict = {
+    "0632": drive_name[0],
+    "0753": drive_name[0],
+    "1001": drive_name[0],
+    "1002": drive_name[0],
+    "1003": drive_name[10],
+    "1152": drive_name[13],
+    "1153": drive_name[13],
+    "1303": drive_name[13],
+    "1304": drive_name[23],
+    "1306": drive_name[23],
+    "1652": drive_name[34],
+    "1654": drive_name[34] 
+}
+
 
 # Inputs
 gbx_type = "NPL"
-select_servoDrive = "K5700"
 
 if gbx_type == "Cone Drive":
     first_three_letters = "S"
@@ -49,30 +58,7 @@ selected_gbx_names = gbx_name[gbx_name.str.startswith(first_three_letters)]
 if len(selected_gbx_names) == 0:
     print("No gearbox names found for the selected type.")
 else:
-    print(selected_gbx_names)
-
-# Determine which drive section to use based on user input
-if select_servoDrive == "K5500":
-    drive_name = Hdrive_name
-    drive_cost = Hdrive_cost
-elif select_servoDrive == "K5700":
-    drive_name = Ddrive_name
-    drive_cost = Ddrive_cost
-else:
-    print("Invalid drive section selection.")
-    exit()
-    
-# Input Calculations from Motion Analyzer 
-peak_speed = 12.5
-peak_torque_input = 59.63
-peak_acceleration = 19.63
-max_inertia = 2.94
-
-
-# Calculate the new speed for each selected gearbox
-new_speeds = []
-for ratio in gbx_ratio[gbx_name.str.startswith(first_three_letters)]:
-    new_speeds.append(ratio * peak_speed)
+    pass
 
 # Servo Section
 servo_item_num = pd.to_numeric(df.iloc[1:,9], errors='coerce').dropna().apply(lambda x: int(x))
@@ -83,45 +69,24 @@ servo_peak_torque = pd.to_numeric(df.iloc[1:,12], errors='coerce').dropna()
 servo_velocity = pd.to_numeric(df.iloc[1:,13], errors='coerce').dropna()
 servo_cost = pd.to_numeric(df.iloc[1:,15], errors='coerce').dropna()
 
-           
-# Create a set to keep track of unique combinations of percentage values
-seen_combinations = set()
 
-# Create a list of dictionaries with the desired columns
-results = []
-for name, ratio in zip(selected_gbx_names, gbx_ratio[gbx_name.str.startswith(first_three_letters)]):
-    new_speed = ratio * peak_speed
-    for servo, velocity, cost, peak_torque, cont_torque in zip(servo_name, servo_velocity, servo_cost, servo_peak_torque, servo_cont_torque):
-        post_gbx_torque = (peak_torque_input) / ((ratio) * ((1 - ((max_inertia* peak_acceleration) / (peak_torque * ratio)))))
-        percentage_speed = new_speed / velocity * 100
-        percentage_peak_torque = post_gbx_torque / peak_torque * 100
-        percentage_cont_torque = post_gbx_torque / cont_torque * 100
-        if percentage_speed <= 80 and percentage_peak_torque <= 80 and percentage_cont_torque <= 65 and percentage_peak_torque >= 0 and percentage_cont_torque >= 0:
-            drive_name = name.split()[0]  # Get the drive name from the gearbox name
-            servo_cost_val = servo_cost
-            gbx_cost_val = gbx_cost[gbx_name == name].iloc[0]
-            # convert drive_name to a Pandas Series object
-            drive_name_series = pd.Series(drive_name)
-            # use the 'str.startswith()' method on the Series object
-            drive_cost = drive_cost.reset_index(drop=True)
-            drive_cost_val = drive_cost[drive_name_series.str.startswith(name.split()[0])].iloc[0]
-            total_cost = gbx_cost_val + drive_cost_val + servo_cost_val
-            combination = (ratio, velocity)
-            if combination not in seen_combinations:
-                seen_combinations.add(combination)
-                results.append({'Gearbox Name': name, 'Ratio': ratio, 'New Speed (m/s)': new_speed, 'Servo Name': servo, 'Velocity (m/s)': velocity, 'Post-GBX Peak Torque (Nm)': post_gbx_torque, 'Percentage of Servo Peak Torque (%)': percentage_peak_torque, 'Percentage of Servo Continuous Torque (%)': percentage_cont_torque, 'Cost': total_cost})
+# Create a list to store the servo and drive names
+servo_drive_list = []
 
-        
-# Convert the list of dictionaries to a pandas dataframe
-df_results = pd.DataFrame(results)
+# Loop through the servo names and find their corresponding drive names
+for name in servo_name:
+    serv_id = name[5:9]
+    if serv_id in k57_D_dict:
+        drive_name = k57_D_dict[serv_id]
+        servo_drive_list.append([name, drive_name])
+    else:
+        servo_drive_list.append([name, "No matching drive found"])
 
-# Export the dataframe to Excel
-file_name = f"{project_name}.xlsx"
-sheet_name = axis_name
-df_results.to_excel(file_name, sheet_name=sheet_name, index=False)
+# Create a dataframe from the servo_drive_list
+servo_drive_df = pd.DataFrame(servo_drive_list, columns=["Servo Name", "Drive Name"])
 
-# Set the location of the export
-export_location = r"C:\Users\shacosta\Desktop"
-file_path = os.path.join(export_location, file_name)
-df_results.to_excel(file_path, sheet_name=sheet_name, index=False)
- 
+# Add a column for total cost
+servo_drive_df["Total Cost"] = servo_cost + drive_cost
+
+# Print the DataFrame
+print(servo_drive_df)
