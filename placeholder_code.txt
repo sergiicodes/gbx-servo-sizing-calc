@@ -25,24 +25,6 @@ drive_name = drive_name[drive_name != 'nan'].reset_index(drop=True)
 drive_series = pd.to_numeric(df.iloc[1:,18], errors='coerce').dropna()
 drive_cost = pd.to_numeric(df.iloc[1:,19], errors='coerce').dropna()
 
-# Dictionary of Servos that Correspond to Respective Servo Drives
-# K5700 D-Drives
-k57_D_dict = {
-    "0632": drive_name[0],
-    "0753": drive_name[0],
-    "1001": drive_name[0],
-    "1002": drive_name[0],
-    "1003": drive_name[10],
-    "1152": drive_name[13],
-    "1153": drive_name[13],
-    "1303": drive_name[13],
-    "1304": drive_name[23],
-    "1306": drive_name[23],
-    "1652": drive_name[34],
-    "1654": drive_name[34] 
-}
-
-
 # Inputs
 gbx_type = "NPL"
 
@@ -69,24 +51,12 @@ servo_peak_torque = pd.to_numeric(df.iloc[1:,12], errors='coerce').dropna()
 servo_velocity = pd.to_numeric(df.iloc[1:,13], errors='coerce').dropna()
 servo_cost = pd.to_numeric(df.iloc[1:,15], errors='coerce').dropna()
 
+servo_and_drive_TOTALcost = pd.to_numeric(df.iloc[1:,20], errors='coerce').dropna().reset_index()
 
-# Create a list to store the servo and drive names
-servo_drive_list = []
-
-# Loop through the servo names and find their corresponding drive names
-for name in servo_name:
-    serv_id = name[5:9]
-    if serv_id in k57_D_dict:
-        drive_name = k57_D_dict[serv_id]
-        servo_drive_list.append([name, drive_name])
-    else:
-        servo_drive_list.append([name, "No matching drive found"])
+three_cols = (servo_name , drive_name, servo_and_drive_TOTALcost)
 
 # Create a dataframe from the servo_drive_list
-servo_drive_df = pd.DataFrame(servo_drive_list, columns=["Servo Name", "Drive Name"])
-
-# Add a column for total cost
-servo_drive_df["Total Cost"] = servo_cost + drive_cost
+servo_drive_df = pd.DataFrame(three_cols)
 
 # Print the DataFrame
-print(servo_drive_df)
+#print(servo_drive_df)
