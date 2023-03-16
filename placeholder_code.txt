@@ -2,7 +2,7 @@
 import pandas as pd 
 
 # Pandas Read
-location = r"C:\Users\shacosta\Desktop\Analyzer Selection - Copy.xlsx"
+location = r"C:\Users\jbooker\Desktop\Analyzer Selection - Copy.xlsx"
 try:
     df = pd.read_excel(location)
 except:
@@ -20,7 +20,7 @@ gbx_cost = pd.to_numeric(df.iloc[1:,6], errors='coerce')
 
 # Drive Section 
 drive_item_num = pd.to_numeric(df.iloc[1:,16], errors='coerce').dropna().apply(lambda x: int(x))
-drive_name = df.iloc[1:, 17].astype(str).str.strip()
+drive_name = df.iloc[1:, 17].astype(str).str.strip().dropna().reset_index(drop=True)
 drive_name = drive_name[drive_name != 'nan'].reset_index(drop=True) 
 drive_series = pd.to_numeric(df.iloc[1:,18], errors='coerce').dropna()
 drive_cost = pd.to_numeric(df.iloc[1:,19], errors='coerce').dropna()
@@ -44,19 +44,25 @@ else:
 
 # Servo Section
 servo_item_num = pd.to_numeric(df.iloc[1:,9], errors='coerce').dropna().apply(lambda x: int(x))
-servo_name = df.iloc[1:, 10].astype(str).str.strip()
+servo_name = df.iloc[1:, 10].astype(str).str.strip().dropna().reset_index(drop=True)
 servo_name = servo_name[servo_name != 'nan'].reset_index(drop=True) 
 servo_cont_torque = pd.to_numeric(df.iloc[1:,11], errors='coerce').dropna()
 servo_peak_torque = pd.to_numeric(df.iloc[1:,12], errors='coerce').dropna()
 servo_velocity = pd.to_numeric(df.iloc[1:,13], errors='coerce').dropna()
 servo_cost = pd.to_numeric(df.iloc[1:,15], errors='coerce').dropna()
 
-servo_and_drive_TOTALcost = pd.to_numeric(df.iloc[1:,20], errors='coerce').dropna().reset_index()
+servo_and_drive_TOTALcost = pd.to_numeric(df.iloc[1:,20], errors='coerce').dropna().values
 
 three_cols = (servo_name , drive_name, servo_and_drive_TOTALcost)
 
 # Create a dataframe from the servo_drive_list
 servo_drive_df = pd.DataFrame(three_cols)
 
-# Print the DataFrame
-#print(servo_drive_df)
+# Transpose the dataframe
+servo_drive_df_T = servo_drive_df.T
+
+# Rename the columns
+servo_drive_df_T.columns = ["Servo name", "Drive name", "Total Cost"]
+
+servo_drive_df = servo_drive_df_T 
+print(servo_drive_df)
