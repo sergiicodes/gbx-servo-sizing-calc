@@ -3,8 +3,8 @@ import pandas as pd
 import os
 
 # Names the Excel file and sheet
-project_name = input("Project Name: ")
-axis_name = input("Axis Name: ")
+project_name = "BRENTON 4485"
+axis_name = "LAYER CONVEYOR"
 
 # Pandas Read
 location = r"C:\Users\shacosta\Desktop\Analyzer Selection - Copy.xlsx"
@@ -15,19 +15,16 @@ except:
     exit()
 
 # Gearbox Section
-gbx_item_num = pd.to_numeric(df.iloc[1:,0], errors='coerce').dropna().apply(lambda x: int(x))
 gbx_name = df.iloc[1:, 1].astype(str).str.strip() 
-gbx_frame = pd.to_numeric(df.iloc[1:,2], errors='coerce')
 gbx_ratio = pd.to_numeric(df.iloc[1:,3], errors='coerce')
 gbx_speed = pd.to_numeric(df.iloc[1:,4], errors='coerce')
 gbx_torque = pd.to_numeric(df.iloc[1:,5], errors='coerce')
 gbx_cost = pd.to_numeric(df.iloc[1:,6], errors='coerce')
 
+
 # Drive Section 
-drive_item_num = pd.to_numeric(df.iloc[1:,16], errors='coerce').dropna().apply(lambda x: int(x))
 drive_name = df.iloc[1:, 17].astype(str).str.strip().dropna().reset_index(drop=True)
 drive_name = drive_name[drive_name != 'nan'].reset_index(drop=True) 
-drive_series = pd.to_numeric(df.iloc[1:,18], errors='coerce').dropna()
 drive_cost = pd.to_numeric(df.iloc[1:,19], errors='coerce').dropna()
 
 # Inputs
@@ -46,13 +43,14 @@ if len(selected_gbx_names) == 0:
     print("No gearbox names found for the selected type.")
 else:
     pass
-    
-    
+
+
+ 
 # Input Calculations from Motion Analyzer 
-peak_speed = float(input("\nPeak Speed [RPM]: "))
-peak_torque_input = float(input("Peak Torque [Nm]: "))
-peak_acceleration = float(input("Peak Acceleration [rad/s^2]: "))
-max_inertia = float(input("Maximum Inertia [kg-m^2]: "))
+peak_speed = 41.5
+peak_torque_input = 32.97
+peak_acceleration = 8.70
+max_inertia = 1.14
 
 
 # Calculate the new speed for each selected gearbox
@@ -60,8 +58,8 @@ new_speeds = []
 for ratio in gbx_ratio[gbx_name.str.startswith(first_three_letters)]:
     new_speeds.append(ratio * peak_speed)
 
+
 # Servo Section
-servo_item_num = pd.to_numeric(df.iloc[1:,9], errors='coerce').dropna().apply(lambda x: int(x))
 servo_name = df.iloc[1:, 10].astype(str).str.strip().dropna().reset_index(drop=True)
 servo_name = servo_name[servo_name != 'nan'].reset_index(drop=True) 
 servo_cont_torque = pd.to_numeric(df.iloc[1:,11], errors='coerce').dropna()
@@ -69,14 +67,14 @@ servo_peak_torque = pd.to_numeric(df.iloc[1:,12], errors='coerce').dropna()
 servo_velocity = pd.to_numeric(df.iloc[1:,13], errors='coerce').dropna()
 servo_cost = pd.to_numeric(df.iloc[1:,15], errors='coerce').dropna()
 
-servo_and_drive_TOTALcost = pd.to_numeric(df.iloc[1:,20], errors='coerce').dropna().values
-         
+#servo_and_drive_TOTALcost = pd.to_numeric(df.iloc[1:,20], errors='coerce').dropna().values
+
 # Create a set to keep track of unique combinations of percentage values
 seen_combinations = set()
-            
+results = [] 
+# Filter the gbx_cost column based on the selected_gbx_names
+selected_gbx_cost = gbx_cost[gbx_name.str.startswith(first_three_letters)].dropna()
 
-# Create a list of dictionaries with the desired columns
-results = []
 for name, ratio in zip(selected_gbx_names, gbx_ratio[gbx_name.str.startswith(first_three_letters)]):
     new_speed = ratio * peak_speed
     for servo, velocity, cost, peak_torque, cont_torque in zip(servo_name, servo_velocity, servo_cost, servo_peak_torque, servo_cont_torque):
@@ -86,30 +84,11 @@ for name, ratio in zip(selected_gbx_names, gbx_ratio[gbx_name.str.startswith(fir
         percentage_cont_torque = post_gbx_torque / cont_torque * 100
         if percentage_speed <= 80 and percentage_peak_torque <= 80 and percentage_cont_torque <= 65 and percentage_peak_torque >= 0 and percentage_cont_torque >= 0:
             combination = (percentage_speed, percentage_peak_torque, percentage_cont_torque)
-            if combination not in seen_combinations:
-                drive_name = ""
-                drive_cost = 0
-                for drive_info in zip(drive_name, drive_cost):
-                    if drive_info[0] == servo:
-                        drive_name = drive_info[1]
-                        drive_cost = drive_info[2]
-                        break
-                
-                total_cost = gbx_cost[gbx_name == name].iloc[0] + cost + drive_cost
-                result = {"Drive Name": drive_name, "Servo": servo, "Gearbox Name": gbx_name, "Percentage Speed": percentage_speed, "Percentage Peak Torque": percentage_peak_torque, "Percentage Cont Torque": percentage_cont_torque, "Total Cost": total_cost}
-                results.append(result)
-                seen_combinations.add(combination)
+            
+            total_cost = gbx_cost[gbx_name == name].iloc[0] + cost + drive_cost
+            result = {"Drive Name": drive_name, "Servo": servo, "Gearbox Name": name, "Percentage Speed": percentage_speed, "Percentage Peak Torque": percentage_peak_torque, "Percentage Cont Torque": percentage_cont_torque, "Total Cost": total_cost}
+            results.append(result)
+            seen_combinations.add(combination)
 
-
-# Convert the list of dictionaries to a pandas dataframe
 df_results = pd.DataFrame(results)
-
-# Export the dataframe to Excel
-file_name = f"{project_name}.xlsx"
-sheet_name = axis_name
-df_results.to_excel(file_name, sheet_name=sheet_name, index=False)
-
-# Set the location of the export
-export_location = r"C:\Users\shacosta\Desktop"
-file_path = os.path.join(export_location, file_name)
-df_results.to_excel(file_path, sheet_name=sheet_name, index=False)
+print(df_results)
